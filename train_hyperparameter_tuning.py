@@ -1,10 +1,8 @@
 import optuna
 import torch
 import torch.nn as nn
-from torchvision.datasets import CIFAR10
 import timm
-from torch.utils.data import random_split
-from train_utils import split_dataset
+from train_utils import cifar10_train_val, select_device
 
 # model_name = 'fastvit_t8.apple_dist_in1k'
 # model_name = 'fastvit_t8'
@@ -12,40 +10,29 @@ from train_utils import split_dataset
 # model_name = 'tiny_vit_21m_224'
 model_name = None
 
-device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+device = select_device()
 
 train_dataset, val_dataset = None, None
 
 
 def get_hyperparameters_tunning_train_val_loaders(model_default_transforms):
+    """Use 32k/8k inside the training partition; reserve final validation and test."""
     global train_dataset, val_dataset
 
     if train_dataset is not None and val_dataset is not None:
         print("Returning cached train_dataset and val_dataset")
         return train_dataset, val_dataset
 
-    full_train_dataset = CIFAR10(
-        root="./data", train=True, download=True, transform=model_default_transforms
+    train_transforms, eval_transforms = model_default_transforms
+    train_dataset, val_dataset = cifar10_train_val(
+        train_transforms, eval_transforms, root=args.data_root, seed=args.seed,
+        download=args.download, tuning=True,
     )
-    # Split the 50000 train dataset into 40000 training and 10000 validation, with a fixed seed for consistency between trials
-    _, full_val_dataset = split_dataset(full_train_dataset)
-
-    # Split the full_val_dataset into train_dataset (80%) and val_dataset (20%)
-    train_dataset, val_dataset = split_dataset(full_val_dataset)
 
     return train_dataset, val_dataset
 
 
 def objective(trial):
-    # Suggest hyperparameters
-    # learning_rate = trial.suggest_float("learning_rate", 1e-5, 1e-2)
-    # batch_size = trial.suggest_categorical("batch_size", [16, 32, 64])
-    # optimizer_name = trial.suggest_categorical("optimizer", ["Adam", "SGD"])
-    # weight_decay = trial.suggest_float("weight_decay", 1e-5, 1e-2)
-    # scheduler_name = trial.suggest_categorical(
-    #     "scheduler", ["StepLR", "ReduceLROnPlateau"]
-    # )
-
     learning_rate = trial.suggest_float("learning_rate", 1e-5, 1e-2)
     batch_size = trial.suggest_categorical("batch_size", [16, 32, 64])
     optimizer_name = trial.suggest_categorical("optimizer", ["Adam", "SGD"])
@@ -57,12 +44,13 @@ def objective(trial):
     print(f"[{model_name}] Trial: {trial.number}")
 
     # Load the model and dataset
-    model = timm.create_model(model_name, pretrained=False)
+    model = timm.create_model(model_name, pretrained=args.pretrained)
     data_config = timm.data.resolve_model_data_config(model)
     model_default_transforms = timm.data.create_transform(
         **data_config, is_training=False
     )
-    get_hyperparameters_tunning_train_val_loaders(model_default_transforms)
+    train_transforms = timm.data.create_transform(**data_config, is_training=True)
+    get_hyperparameters_tunning_train_val_loaders((train_transforms, model_default_transforms))
 
     classes = (
         "plane",
@@ -90,8 +78,6 @@ def objective(trial):
     model.reset_classifier(num_classes)
 
     # Move the model to the appropriate device
-    # For some reason if I transfer to device right after creating the model, it doesn't work
-    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[{model_name}] Using device: {device}")
     model.to(device)
 
@@ -118,7 +104,7 @@ def objective(trial):
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, "min")
 
     # Training loop (simplified)
-    for epoch in range(10):  # Use fewer epochs for hyperparameter optimization
+    for epoch in range(args.epochs):  # Use fewer epochs for hyperparameter optimization
         model.train()
         for inputs, labels in train_loader:
             inputs, labels = inputs.to(device), labels.to(device)
@@ -136,11 +122,11 @@ def objective(trial):
             for inputs, labels in val_loader:
                 inputs, labels = inputs.to(device), labels.to(device)
                 outputs = model(inputs)
-                val_loss += criterion(outputs, labels).item()
+                val_loss += criterion(outputs, labels).item() * labels.size(0)
                 preds = outputs.argmax(dim=1)
                 correct += (preds == labels).sum().item()
 
-        val_loss /= len(val_loader)
+        val_loss /= len(val_dataset)
         val_acc = correct / len(val_dataset)
 
         # Scheduler step
@@ -166,12 +152,37 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model", metavar="path", required=True, help="The model name to fine tune"
     )
+    parser.add_argument("--pretrained", action="store_true")
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--trials", type=int, default=50)
+    parser.add_argument("--epochs", type=int, default=10)
+    parser.add_argument("--data-root", default="./data")
+    parser.add_argument("--download", action="store_true")
+    parser.add_argument("--storage", default="sqlite:///build/tuning.sqlite3")
+    parser.add_argument("--study-name", required=True, help="Use a distinct name for each model and initialization")
     args = parser.parse_args()
+    import os
+    os.makedirs("build", exist_ok=True)
+    import random
+    import numpy as np
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    if args.epochs < 1 or args.trials < 1:
+        parser.error("--epochs and --trials must be positive")
 
     model_name = args.model
 
     # print(f"[{model_name}] Using device: {device}")
 
     # Run optimization
-    study = optuna.create_study(direction="maximize")
-    study.optimize(objective, n_trials=50)
+    study = optuna.create_study(
+        direction="maximize", storage=args.storage, study_name=args.study_name,
+        sampler=optuna.samplers.TPESampler(seed=args.seed),
+    )
+    study.set_user_attr("protocol", "corrected-inner-training-split-2026-11-23")
+    study.set_user_attr("model", args.model)
+    study.set_user_attr("pretrained", args.pretrained)
+    study.set_user_attr("seed", args.seed)
+    study.optimize(objective, n_trials=args.trials)
+    print("Best accuracy and settings:", study.best_value, study.best_params)

@@ -116,11 +116,13 @@ def load_and_plot_all_data(pickle_file):
     print("Validation Size:", data["val_size"])
     print("Epochs:", data["epochs"][-1])
     if "test_acc" in data:
-        print("Test Accuracy:", f"{data["test_acc"] * 100:.2f}%")
+        label = ("True test accuracy" if data["metadata"].get("evaluation_protocol")
+                 else "Historical recorded accuracy (split unresolved)")
+        print(label + ":", f"{data['test_acc'] * 100:.2f}%")
     else:
         print("Validation Accuracy:", f"{data["val_acc"][-1] * 100:.2f}%")
     print("Training Time:", f"{data["train_time"]:.2f} seconds")
-    print("Inference Time:", f"{data["inference_time"] * 1000:.2f} ms")
+    print("Recorded host evaluation time/image (not phone latency):", f"{data["inference_time"] * 1000:.2f} ms")
     print("Additional Metadata:", data["metadata"])
 
     # Create a figure for loss and accuracy
@@ -154,7 +156,9 @@ def load_and_plot_all_data(pickle_file):
     classes = data["classes"]
     # cm = cm.astype("float") / (cm.sum(axis=1)[:, np.newaxis] + 1e-6)
     plt.imshow(cm, interpolation="nearest", cmap=plt.cm.Blues)
-    plt.title(f"Confusion Matrix - {data['model_name']}")
+    historical = not data["metadata"].get("evaluation_protocol")
+    plt.title(f"Confusion Matrix - {data['model_name']}" +
+              (" (historical; axes unresolved)" if historical else ""))
     plt.colorbar()
     tick_marks = np.arange(len(classes))
     plt.xticks(tick_marks, classes, rotation=45)
@@ -171,8 +175,8 @@ def load_and_plot_all_data(pickle_file):
                 va="center",
                 color="white" if cm[i, j] > thresh else "black",
             )
-    plt.ylabel("True label")
-    plt.xlabel("Predicted label")
+    plt.ylabel("Stored row axis (unresolved)" if historical else "True label")
+    plt.xlabel("Stored column axis (unresolved)" if historical else "Predicted label")
     plt.tight_layout()
     plt.show()
 

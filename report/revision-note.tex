@@ -1,0 +1,15 @@
+\section*{Public work sample revision -- November 23, 2026}
+\addcontentsline{toc}{section}{Public work sample revision}
+\begin{singlespace}
+This remains Adarley Luiz Grando Filho's December 2024 SYS843 course project. The practical motivation was a possible future on-device recognition feature for Fruit Map, the author's nonprofit fruit-tree mapping app. This was exploratory work: no recognition feature was shipped, and neither plant recognition nor an end-to-end app pipeline was validated here.
+
+The project has two tracks: FastViT-T8 training/fine-tuning on CIFAR-10, and conversion of externally pretrained models for iPhone 13 Pro benchmarking with Core ML/Xcode. ImageNet accuracy is externally sourced; the latency table records historical device measurements. These must not be combined into a claim of locally measured ImageNet accuracy or equal pretraining histories.
+
+The public code and four archived checkpoint/metadata pairs were audited in 2026. The metadata contains the reported 85.28\% and 88.66\%, but the archived script's test loader reads the augmented validation subset. Validation also shares training augmentation, and early stopping does not restore the best weights. The exact code used for the historical runs is unavailable. Those percentages are therefore retained as historical recorded metrics with unresolved split provenance, not certified held-out test results.
+
+The report's tuning description also differs from the script: the code uses Optuna, maximizes accuracy, initializes without pretraining, and searches a narrower space. It trains on part of the later validation partition. No trial logs substantiate the report's two 50-trial searches. Recorded learning rates, weight decay, batch size, and scheduler are supported by metadata, but the initialization flags and exact pretrained weight revisions are not recorded there.
+
+Local corrections now separate transforms and partitions, restore a validation-selected checkpoint, and evaluate the true test split once. These changes do not reproduce the 2024 training. A new evaluation of all four saved weights on the official 10,000-example test set, using deterministic timm preprocessing, measured 92.80\%, 92.41\%, 96.17\%, and 95.70\% for checkpoints 001--004, respectively. No weights were trained or changed. The initialization labels follow historical filenames; the exact training code and pretrained revision remain unresolved. The accompanying \texttt{report/AUDIT.md} and machine-readable evaluation record provide the evidence and commands separately. Original figures and device measurements remain historical artifacts. Raw Xcode reports, OS/tool versions, compute-unit settings, and repeated-run uncertainty are unavailable.
+
+This revision fixes notation, bibliography, duplicate labels, stale wording, and the methodological claims identified above. The original report source remains available in Git commit \texttt{f6a93a9}; no historical artifacts have been replaced by new measurements.
+\end{singlespace}

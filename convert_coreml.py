@@ -1,76 +1,63 @@
+"""Convert pretrained ImageNet timm weights, separately from CIFAR-10 checkpoints."""
+import argparse
+import json
+from pathlib import Path
+
 import coremltools as ct
 import timm
 import torch
-import statistics
-import argparse
-
-# model_name = "fastvit_t8.apple_in1k" # 4.05M
-# model_name = "fastvit_sa12.apple_in1k"  # 11.6M
-# model_name = "mobileone_s1.apple_in1k" # 4.89M
-# model_name = "mobileone_s3.apple_in1k"  # 10.3M
-# model_name = "tiny_vit_11m_224.dist_in22k_ft_in1k" # 11M
-# model_name = "tiny_vit_21m_224.dist_in22k_ft_in1k"  # 21.2M
-# model_name = "resnet18.a1_in1k" # 11.7M
-model_name = "resnet34.a1_in1k"  # 21.8M
+from torchvision.models import ResNet18_Weights
 
 
-def convert_model_to_coreml(model_name):
-    print(f"Creating model {model_name}")
-    timm_model = timm.create_model(
-        model_name, pretrained=True, scriptable=False, exportable=True
+class ImageClassifier(torch.nn.Module):
+    """Normalize each RGB channel exactly; ImageType first scales pixels to [0, 1]."""
+    def __init__(self, model, mean, std):
+        super().__init__()
+        self.model = model
+        self.register_buffer("mean", torch.tensor(mean).view(1, 3, 1, 1))
+        self.register_buffer("std", torch.tensor(std).view(1, 3, 1, 1))
+
+    def forward(self, image):
+        return self.model((image - self.mean) / self.std).softmax(dim=1)
+
+
+def convert_model_to_coreml(model_name, output_dir="build/coreml", labels_path=None):
+    output = Path(output_dir) / f"{model_name}.mlpackage"
+    if output.exists():
+        raise FileExistsError(f"Refusing to overwrite {output}; choose another --output-dir")
+    model = timm.create_model(model_name, pretrained=True, scriptable=False, exportable=True).eval()
+    config = timm.data.resolve_model_data_config(model)
+    # These are the standard 1000 ImageNet categories in torchvision logit order.
+    labels = (Path(labels_path).read_text().splitlines() if labels_path else
+              ResNet18_Weights.IMAGENET1K_V1.meta["categories"])
+    if len(labels) != model.num_classes or any(not label.strip() for label in labels):
+        raise ValueError(f"Expected {model.num_classes} nonempty labels in classifier logit order")
+    shape = (1,) + tuple(config["input_size"])
+    wrapped = ImageClassifier(model, config["mean"], config["std"]).eval()
+    with torch.inference_mode():
+        traced = torch.jit.trace(wrapped, torch.rand(shape))
+    converted = ct.convert(
+        traced, convert_to="mlprogram",
+        inputs=[ct.ImageType(name="image", shape=shape, scale=1 / 255.0)],
+        classifier_config=ct.ClassifierConfig(labels), skip_model_load=True,
+        minimum_deployment_target=ct.target.iOS15,
     )
-
-    model = torch.nn.Sequential(timm_model, torch.nn.Softmax(1)).eval()
-
-    input_size = timm_model.default_cfg.get("input_size")
-    input_shape = (1,) + input_size
-
-    print("Tracing model")
-    example_input = torch.randn(input_shape)
-    jit_model = torch.jit.trace(model, example_input)
-
-    labels_filename = "imagenet-classes.txt"
-
-    with open(labels_filename, "r") as labels_file:
-        labels = [line.strip() for line in labels_file.readlines()]
-
-    classifier_config = ct.ClassifierConfig(labels)
-
-    print("Converting model")
-    mean = list(timm_model.default_cfg.get("mean"))
-    std = list(timm_model.default_cfg.get("std"))
-
-    mean_std = statistics.mean(std)
-    scale = 1 / (mean_std * 255)
-    bias = [-m / s for m, s in zip(mean, std)]
-    input_type = ct.ImageType(name="image", shape=input_shape, scale=scale, bias=bias)
-
-    coreml_model = ct.convert(
-        jit_model,
-        convert_to="mlprogram",
-        inputs=[input_type],
-        classifier_config=classifier_config,
-        skip_model_load=True,
-    )
-
-    coreml_model.user_defined_metadata["com.apple.coreml.model.preview.type"] = (
-        "imageClassifier"
-    )
-
-    coreml_model_file_name = f"coreml_models/{model_name}.mlpackage"
-    print(f"Saving model to {coreml_model_file_name}")
-
-    coreml_model.save(coreml_model_file_name)
-    print("Done!")
+    converted.user_defined_metadata["com.apple.coreml.model.preview.type"] = "imageClassifier"
+    converted.user_defined_metadata["timm_model"] = model_name
+    converted.user_defined_metadata["preprocessing"] = json.dumps(config)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    converted.save(str(output))
+    (output.parent / f"{model_name}.preprocessing.json").write_text(json.dumps(config, indent=2) + "\n")
+    print(f"Saved {output}. Resize/crop input according to the preprocessing sidecar.")
 
 
 def main():
-
-    parser = argparse.ArgumentParser(description="Convert TIMM model to CoreML")
-    parser.add_argument("--model", type=str, required=True, help="Model name from TIMM")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--model", required=True, help="Use an explicit pretrained timm weight tag")
+    parser.add_argument("--output-dir", default="build/coreml")
+    parser.add_argument("--labels", help="Optional UTF-8 label file, one class per logit; default: torchvision ImageNet categories")
     args = parser.parse_args()
-
-    convert_model_to_coreml(args.model)
+    convert_model_to_coreml(args.model, args.output_dir, args.labels)
 
 
 if __name__ == "__main__":

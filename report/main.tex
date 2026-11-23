@@ -4,6 +4,9 @@
 
 % Language setting
 \usepackage[english]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\setlength{\emergencystretch}{2em}
 
 % Set page size and margins
 \usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
@@ -18,8 +21,16 @@
 \usepackage{graphicx}
 \usepackage[colorlinks=true, allcolors=blue]{hyperref}
 \usepackage{float} 
-\usepackage{titling}
+% Expose title fields for the custom cover without requiring titling.sty.
+\makeatletter
+\newcommand{\thetitle}{\@title}
+\newcommand{\theauthor}{\@author}
+\newcommand{\thedate}{\@date}
+\makeatother
 \usepackage{caption} % allows centering captions with \captionsetup
+
+\hypersetup{pdftitle={SYS843: Mobile Image Classification -- 2024 project, 2026 audit},
+    pdfauthor={Adarley Luiz Grando Filho}}
 
 \title{Performance Comparison of MobileOne and FastViT with Traditional CNN and ViT Architectures for Image Classification Tasks in Mobile Deployments}
 \author{Adarley Luiz Grando Filho}
@@ -30,6 +41,9 @@
 % Capa
 \input{capa.tex}
 
+\input{revision-note.tex}
+\newpage
+
 \tableofcontents
 \newpage
 
@@ -38,7 +52,7 @@
 \subsection{Domain of application}
 Real-time image classification tasks on mobile devices have wide-ranging applications, from on-device photo organization and augmented reality experiences to embedded systems for drones, robotics, and surveillance. The ability to classify images efficiently on mobile hardware—without relying on cloud processing—can reduce latency, improve user privacy, and lower communication costs. Such capabilities are increasingly important in healthcare (mobile diagnostic tools), retail (product recognition), and navigation (visual-based assistance).
 
-\subsection{Problematic}
+\subsection{Problem statement}
 While traditional architectures such as convolutional neural networks (CNNs) and vision transformers (ViTs) achieve state-of-the-art accuracy in image classification, they often require substantial computational resources. Deploying these models directly onto mobile devices can lead to high latency, increased memory usage, and energy constraints. Although specialized mobile-friendly architectures like MobileOne and FastViT have emerged to address these issues, it remains challenging to compare these diverse architectures under a common experimental setup. Understanding their trade-offs in accuracy, latency, and resource usage is crucial for selecting the best model in real-world deployments.
 
 \subsection{Objectives of the project}
@@ -56,8 +70,8 @@ The document is structured as follows:
     \item \textbf{Introduction:} Presents the domain, the key issues, and the objectives of the project.
     \item \textbf{Summary of the techniques studied:} Provides a general overview of the algorithms (CNNs, ViTs, MobileOne, and FastViT), including an expanded algorithmic description.
     \item \textbf{Experimental methodology:} Details the experimental protocols, training configurations, model deployments, and the chosen performance metrics.
-    \item \textbf{Simulation results:} (Skeleton) Will present the measured results, comparisons, and analyses.
-    \item \textbf{Conclusion:} (Skeleton) Will summarize the findings and provide recommendations.
+    \item \textbf{Results:} Presents the recorded measurements, comparisons, and analyses.
+    \item \textbf{Conclusion:} Summarizes findings and recommendations, subject to the revision note.
 \end{enumerate}
 
 \section{Summary of the techniques studied}
@@ -67,7 +81,7 @@ Figure~\ref{fig:block_diagram} presents a general block diagram of the image cla
 
 In this project Convolutional Neural Networks and Vision Transformers are the neural networks being studied. Figure~\ref{fig:cnn_diagram} illustrates a general diagram of a Convolutional Neural Network architecture. Figure~\ref{fig:vision_transformer_architecture} illustrates a general diagram of a Vision Transformer architecture.
 
-\begin{figure}[]
+\begin{figure}[tbp]
 \centering
 \captionsetup{justification=centering,margin=1cm}
 \setlength{\unitlength}{0.9pt}
@@ -98,14 +112,14 @@ In this project Convolutional Neural Networks and Vision Transformers are the ne
 \label{fig:block_diagram}
 \end{figure}
 
-\begin{figure}[]
+\begin{figure}[tbp]
     \centering
     \captionsetup{justification=centering,margin=1cm}
     \includegraphics[width=0.85\linewidth]{cnn_diagram.png}
     \caption{\label{fig:cnn_diagram}Convolutional Neural Network general architecture (Abdullah, 2022 \cite{cnn_diagram}).}
 \end{figure}
 
-\begin{figure}[]
+\begin{figure}[tbp]
     \centering
     \captionsetup{justification=centering,margin=1cm}
     \includegraphics[width=0.75\linewidth]{vision_transformer_architecture.png}
@@ -121,7 +135,7 @@ Convolutional Neural Networks use convolution filters to extract spatial hierarc
 
 \textbf{ResNet} \cite{he2015deepresiduallearningimage} introduces residual learning to address the training difficulties of very deep networks. It incorporates shortcut (skip) connections that bypass certain layers, allowing gradients to flow more easily through the network. Figure \ref{fig:resnet_residual_learning} illustrates this connection. Mathematically, if a set of layers is designed to approximate a function $F(x)$, ResNet reformulates this into learning $F(x) + x$, where $x$ is the input. This design mitigates the vanishing gradients problem and enables training of extremely deep models without a drop in accuracy. ResNet models are well-known benchmarks in vision tasks, providing a strong baseline for accuracy.
 
-\begin{figure}[]
+\begin{figure}[tbp]
     \centering
     \captionsetup{justification=centering,margin=1cm}
     \includegraphics[width=0.5\linewidth]{resnet_residual_learning.png}
@@ -138,7 +152,7 @@ Key aspects of ViTs:
     \item \textit{Self-Attention:} Allows each patch to attend to all others, capturing global dependencies. This can lead to high accuracy, especially when large datasets are used.
 \end{itemize}
 
-Vision Transformers (ViTs), while excellent at capturing global context and delivering high accuracy, are generally too large in parameter count and computational demands to be deployed efficiently on mobile hardware. Their massive size often leads to prohibitively high memory usage and inference times, making them impractical for real-time, on-device applications. To address this issue and still represent the capabilities of transformer-based architectures in our comparisons, a more compact variant known as TinyViT was chosen. By drastically reducing the scale of the model, TinyViT maintains many of the transformer’s advantages while remaining small enough to feasibly run on a smartphone or similarly constrained device. This approach allows a fair performance comparison of a transformer-based solution without dismissing them due to their high resource demands.
+Vision Transformers (ViTs), while excellent at capturing global context and delivering high accuracy, are generally too large in parameter count and computational demands to be deployed efficiently on mobile hardware. Their massive size often leads to prohibitively high memory usage and inference times, making them impractical for real-time, on-device applications. To address this issue and still represent the capabilities of transformer-based architectures in our comparisons, a more compact variant known as TinyViT was chosen. By drastically reducing the scale of the model, TinyViT maintains many of the transformer’s advantages while remaining small enough to feasibly run on a smartphone or similarly constrained device. TinyViT provides a compact transformer-family reference; differing pretraining histories mean this is not a controlled architecture-only comparison.
 
 \subsubsection*{MobileOne: A Mobile-Optimized CNN}
 \textbf{MobileOne} \cite{vasu2023mobileoneimprovedmillisecondmobile} is a convolutional architecture specifically designed for efficient inference on mobile devices. It employs several strategies:
@@ -156,7 +170,7 @@ The result is a model that can match or exceed the accuracy of classical CNNs li
     \item \textit{RepMixer Blocks:} Inspired by MobileOne, FastViT uses reparameterizable token-mixing blocks that employ depthwise convolutions and skip connections during training. At inference time, these blocks simplify into a latency-efficient form.
     \item \textit{Train-Time Overparameterization, Inference-Time Streamlining:} Similar to MobileOne, FastViT is more complex during training but prunes unnecessary complexity at inference.
 \end{itemize}
-The result is a model that retains much of the ViT’s accuracy and global context modeling but is faster and more resource-friendly on mobile devices.
+FastViT is an architecture family with different token mixers. T8 uses RepMixer throughout and has no self-attention; SA12 includes self-attention in its final stage. The family label does not mean that every variant is an attention-based ViT.
 
 \section{Experimental methodology}
 
@@ -181,35 +195,18 @@ The CIFAR-10 dataset, consisting of 60,000 images across 10 classes, was divided
     \item \textbf{Validation Set:} 10,000 images held out from the training set to guide hyperparameter selection and prevent overfitting.
     \item \textbf{Test Set:} The standard 10,000 images reserved for final accuracy evaluation.
 \end{itemize}
-This partitioning strategy ensures a dedicated validation split for hyperparameter tuning and an untouched test set for final performance assessment.
+This was the intended partitioning strategy. The archived implementation does not establish that it was followed for the reported final metrics; see the revision note.
 
 \subsubsection{Hyperparameter Optimization}
-Before conducting full-length training runs, a dedicated hyperparameter search process was carried out to identify optimal configurations for the model. The optimization was performed with a custom made script to test possible values using the Optima library \cite{optima}, which specializes in handling linear and non-linear constrained optimization problems. The approach was as follows:
+The 2024 report described 50 short runs per initialization, selected by minimum loss, with batch sizes 32--256, learning rates $10^{-5}$--$10^{-2}$, weight decays $10^{-4}$--$10^{-1}$, and SGD/Adam/AdamW with several schedulers. No study logs were archived to verify those searches.
 
-\begin{enumerate}
-    \item \textbf{Script Implementation:} A custom script was developed to systematically test different combinations of hyperparameters for a given model.
-    \item \textbf{Short Training Runs:} For each combination of hyperparameters, a short training process of 10 epochs was executed using the validation set. These short runs allowed rapid experimentation across a wide range of configurations within a practical timeframe.
-    \item \textbf{Selection Criterion:} Each short run’s performance was evaluated based on the loss achieved after 10 epochs. The combination that yielded the lowest loss was considered the optimal hyperparameter set for that particular model.
-\end{enumerate}
-
-The hyperparameters tested various batch sizes, learning rates, weight decays, optimizers, and learning rate schedulers:
-\begin{itemize}
-  \item \textbf{Batch Sizes:} 32, 64, 128, or 256
-  \item \textbf{Learning Rates:} Ranging from $1^{-5}$ to $1^{-2}$
-  \item \textbf{Weight Decays:} Ranging from $1^{-4}$ to $1^{-1}$
-  \item \textbf{Optimizers:} Stochastic Gradient Descent (SGD), Adam, or AdamW
-  \item \textbf{LR Schedulers:} StepLR (decaying every step), ReduceLROnPlateau, or \\ CosineAnnealingLR
-\end{itemize}
-
-The range of values selected to perform the tests were inspired from hyperparameters that the researchers who developed FastViT used and documented in its original paper. The exact hyperparameter values from the paper could not be used because they would require a computer with high performance to allow training. Specially the batch size of 1024 documented in FastViT original paper requires a lot of RAM to perform the gradient calculations, since this amount of images would have to be loaded to memory at once. A Google Colab PRO subscription allowed testing with bigger batch sizes of up to 256.
-
-In total, the script evaluated 50 distinct hyperparameter combinations. By selecting the configuration yielding the best validation performance, the process ensured that full training runs started from a well-tuned configuration.
+The published script instead uses Optuna \cite{optuna}, maximizes final validation accuracy after 10 epochs, and creates models without pretraining. Its search space is batch sizes 16/32/64, learning rate and weight decay each $10^{-5}$--$10^{-2}$, Adam or SGD, and StepLR or ReduceLROnPlateau. It trains on 8,000 examples from the partition later used for final validation and evaluates on the remaining 2,000. These discrepancies prevent attributing the reported configurations to that script. The corrected workflow uses an inner 32,000/8,000 split of the 40,000-example training partition and records new studies separately.
 
 \subsubsection{Training Strategies}
-Once the optimal hyperparameters were identified, FastViT was trained from scratch using the 40,000 training images and validated against the 10,000 validation images. In addition to training FastViT from scratch, an alternative strategy was employed: fine-tuning from a version pretrained on ImageNet-1k. This approach explored whether large-scale pretraining could enhance accuracy or generalization for the smaller CIFAR-10 dataset.
+Using the settings recorded in the archived run metadata, FastViT was trained from scratch using the 40,000 training images and validated against the 10,000 validation images. In addition to training FastViT from scratch, an alternative strategy was employed: fine-tuning from a version pretrained on ImageNet-1k. This approach explored whether large-scale pretraining could enhance accuracy or generalization for the smaller CIFAR-10 dataset.
 
 \subsubsection{Accuracy Evaluation}
-After the full training was completed and the final model parameters were selected, FastViT’s accuracy was evaluated on the standardized CIFAR-10 test set containing 10,000 images. This test split remained untouched during training and hyperparameter tuning, ensuring an unbiased estimate of generalization capability.
+The intended final evaluation used the official 10,000-example CIFAR-10 test set. However, the archived script passes the augmented validation subset to the test loader and does not restore the best validation weights. Consequently, the historical metrics cannot be certified as held-out test results. The corrected code restores the best validation-loss state and evaluates once on CIFAR-10 with \texttt{train=False}. This correction does not regenerate the historical experiments.
 
 \subsection{Protocol to evaluate performance}
 
@@ -217,7 +214,7 @@ The evaluation protocol was designed to assess how various neural network archit
 
 Table \ref{tab:model_param_counts} lists the models under consideration, spanning different families (ResNet, TinyViT, MobileOne, and FastViT) and parameter scales. Among these, FastViT-SA12, MobileOne-S3, TinyViT-11M, and ResNet-18 form a group with similar parameter counts, making them ideal for direct comparisons. Likewise, examining variants like FastViT-T8 or MobileOne-S1 (smaller) against heavier counterparts like TinyViT-21M or ResNet-34 (larger) can provide insights into how scaling up model size affects latency and other performance metrics.
 
-\begin{table}[]
+\begin{table}[tbp]
     \centering
     \doublespacing
     \captionsetup{justification=centering,margin=1cm}
@@ -263,7 +260,7 @@ Together, these latency-related metrics provide a practical understanding of eac
 \subsection{Performance measures}
 The key metrics used in this work are:
 \begin{itemize}
-    \item \textbf{Accuracy:} The proportion of correct top-1 predictions on the CIFAR-10 image test set for the trained FastViT model, and reported proportion of correct top-1 predictions on the ImageNet-1k image test set for all models.
+    \item \textbf{Accuracy:} Historical CIFAR-10 recorded accuracy (split unresolved), and externally reported ImageNet-1k validation accuracy for pretrained weights. These are separate evidence sources.
     \item \textbf{Compute Units:} A measure related to the on-device computational resources allocated for inference.
     \item \textbf{Prediction Median:} The median time for a prediction run, reflecting how quickly a model can respond.
     \item \textbf{Load Median:} The median time taken to load the model onto the device before inference.
@@ -280,62 +277,60 @@ In this section the following results obtained from the experiments are document
 
 \subsection{Training FastViT}
 
-The following subsections describe in detail the processes of training FastViT-T8 from scratch and from pretrained weights on ImageNet-1k. Even though this model is small in parameter count, it was not feasible to successfully train it in a regular computer with limited hardware. Upon further reading of the original paper that introduced this model, it became clear that usual batch sizes of 16 or 32 would not be a good fit to train this model. The original paper suggests that a batch size of 1024 would yield better results.
-
-In order to experiment with this model, a Google Colab Pro subscription was made, that allowed me to access a high RAM server and with better GPUs than my local machine. The high performance server allowed experimenting with bigger batch sizes of up to 256.
+The 2024 experiments compared FastViT-T8 scratch training and fine-tuning. The author reported using Google Colab Pro to access more memory and faster GPUs than the local machine, allowing batch sizes up to 256. The archived metadata confirms batch size 256 for the saved runs. These observations describe the available resources; they do not establish that smaller batch sizes cannot train the model. The exact Colab environment and producing scripts are not archived.
 
 \subsubsection{Hyperparameter Tuning}
 
-After running the hyperparameter tuning process with 50 different combinations, the optimal hyperparameters found for FastViT-T8 were recorded and used for the full trainings. Surprisingly, the hyperparameters used when training FastViT from scratch did not yield good results when performing full training on a pretrained version of FastViT with ImageNet-1k weights, as detailed in Section \ref{sec:training_fastvit}.
+The archived metadata records the configurations in Table \ref{tab:hyperparameters}. The 2024 report attributed them to 50-trial searches, but no study database or trial log is available. The learning-rate comparison is discussed in Section \ref{sec:training_fastvit}.
 
-Upon further investigation, another process of hyperparameter tuning was ran with 50 different combinations of possible values, but this time a pretrained version of the model was used. The optimal hyperparameters for the pretrained version of the model with ImageNet-1k weights showed that a lower learning rate was preferred for this case. All hyperparameter values are documented in Table \ref{tab:hyperparameters}.
+The report describes a second search for pretrained initialization. This remains unverified: the published tuning script only initializes from scratch and cannot produce AdamW or cosine-scheduler configurations. The recorded fine-tuning runs used a lower learning rate than the scratch runs.
 
-\begin{table}[]
+\begin{table}[tbp]
     \centering
     \doublespacing
     \captionsetup{justification=centering,margin=1cm}
     \begin{tabular}{l|c|c}
         \hline
-        \textbf{Parameter} & \textbf{From 0} & \textbf{Fine-tune} \\
+        \textbf{Parameter} & \textbf{From scratch} & \textbf{Fine-tune} \\
         \hline
         Batch size & 256 & 256 \\
         \hline
-        Learning rate & $1^{-3}$ & $1^{-4}$ \\
+        Learning rate & $10^{-3}$ & $10^{-4}$ \\
         \hline
-        Weight decay & $5^{-2}$ & $5^{-2}$ \\
+        Weight decay & $5 \times 10^{-2}$ & $5 \times 10^{-2}$ \\
         \hline
         Optimizer & AdamW & AdamW \\
         \hline
         Learning rate scheduler & CosineAnnealingLR & CosineAnnealingLR \\
         \hline
     \end{tabular}
-    \caption{Optimal hyperparameters found after running 50 combinations of possible values per training type of FastViT-T8.}
+    \caption{Settings recorded in the 2024 FastViT-T8 run metadata; search provenance unresolved.}
     \label{tab:hyperparameters}
 \end{table}
 
 \subsubsection{Training} \label{sec:training_fastvit}
 
-When training FastViT from scratch using the hyperparameters previously identified as optimal, both training and validation loss curves improved steadily and predictably. The model converged smoothly, and over time the validation loss closely followed the training loss, indicating that the chosen learning rate and optimization parameters were well-suited for a model initialized with random weights. Figure~\ref{fig:fastvit_train_0} shows these stable, gradually declining loss curves, exemplifying a straightforward convergence pattern. In the last epochs we can see that the model continued to lower its train loss, but the validation loss stopped decreasing, indicating that the model had began to memorize the train data split, so the training needed to be halted at that point to prevent overfitting.
+When training FastViT from scratch using the recorded hyperparameters, both training and validation loss curves improved steadily and predictably. The model converged smoothly, and over time the validation loss closely followed the training loss, indicating that the chosen learning rate and optimization parameters were well-suited for a model initialized with random weights. Figure~\ref{fig:fastvit_train_0} shows these stable, gradually declining loss curves, exemplifying a straightforward convergence pattern. In the last epochs we can see that the model continued to lower its train loss, but the validation loss stopped decreasing, indicating that the model had begun to overfit the training split, so the training needed to be halted at that point to prevent overfitting.
 
-\begin{figure}[]
+\begin{figure}[tbp]
     \centering
     \captionsetup{justification=centering,margin=1cm}
     \includegraphics[width=0.6\linewidth]{fastvit_train_0.png}
-    \caption{\label{fig:fastvit_train_0}Train and validation loss over training epochs of FastViT-T8 (trained from 0 on CIFAR-10).}
+    \caption{\label{fig:fastvit_train_0}Train and validation loss over training epochs of FastViT-T8 (trained from scratch on CIFAR-10).}
 \end{figure}
 
 In contrast, applying the same hyperparameters directly to a pretrained FastViT model resulted in significantly different behavior. While the training loss still trended downward, the validation loss began to oscillate after a few epochs, never settling into a stable improvement phase. This instability suggested that the learning rate and other settings optimal for from-scratch training were too aggressive for fine-tuning. As shown in Figure~\ref{fig:fastvit_train_pretrained_bad_lr}, the validation loss curve reflects a noisy and inconsistent trajectory, highlighting the need for adjusted hyperparameters when starting from pretrained weights.
 
-\begin{figure}[]
+\begin{figure}[tbp]
     \centering
     \captionsetup{justification=centering,margin=1cm}
     \includegraphics[width=0.6\linewidth]{fastvit_train_pretrained_bad_lr.png}
     \caption{\label{fig:fastvit_train_pretrained_bad_lr}Train and validation loss over training epochs of FastViT-T8 with bad hyperparameters for fine-tuning (fine-tuned on CIFAR-10 from pretrained weights on ImageNet-1k).}
 \end{figure}
 
-After recognizing this issue, a new round of hyperparameter optimization was conducted, this time specifically targeting the pretrained scenario. Among the 50 combinations tested, those featuring a reduced learning rate yielded more stable and consistent validation performance. Figure~\ref{fig:fastvit_train_pretrained_good_lr} shows the improved loss curves after incorporating these changes: the validation loss stabilized without the previous large oscillations. Moreover, this carefully tuned configuration not only avoided instability but also achieved better generalization than the from-scratch training, demonstrating the benefits of fine-tuning with appropriately chosen hyperparameters. 
+The 2024 report attributed the improved curves to another hyperparameter search, whose logs are unavailable. The recorded lower-learning-rate fine-tuning run showed more stable validation performance. Figure~\ref{fig:fastvit_train_pretrained_good_lr} shows the improved loss curves after incorporating these changes: the validation loss stabilized without the previous large oscillations. The higher recorded accuracy is suggestive of a benefit from fine-tuning, but the validation augmentation and unresolved evaluation provenance limit this comparison.
 
-\begin{figure}[]
+\begin{figure}[tbp]
     \centering
     \captionsetup{justification=centering,margin=1cm}
     \includegraphics[width=0.6\linewidth]{fastvit_train_pretrained_good_lr.png}
@@ -344,20 +339,20 @@ After recognizing this issue, a new round of hyperparameter optimization was con
 
 \subsubsection{Accuracy on CIFAR-10}
 
-The final top-1 accuracy in the test split of the model was of 85.28\%, when trained from scratch on CIFAR-10. The final top-1 accuracy in the test split of the model was of 88.66\%, when fine-tuned on CIFAR-10 from pretrained weights on ImageNet-1k. A confusion matrix of the most successful training process was also calculated and is illustrated in Figure~\ref{fig:fastvit_train_pretrained_cm}.
+The 2024 report recorded 85.28\% for scratch training and 88.66\% for fine-tuning. These match metadata for checkpoints 001 and 003, respectively, but are historical metrics with unresolved split provenance, not verified held-out test accuracies. The published test loader uses the augmented validation subset. Figure~\ref{fig:fastvit_train_pretrained_cm} is retained as a historical artifact; its split and axis orientation are not independently established. New checkpoint evaluation is documented separately in the accompanying audit.
 
-\begin{figure}[]
+\begin{figure}[tbp]
     \centering
     \captionsetup{justification=centering,margin=1cm}
     \includegraphics[width=0.75\linewidth]{fastvit_train_pretrained_cm.png}
-    \caption{\label{fig:fastvit_train_pretrained_cm}Confusion Matrix after end of training of FastViT-T8 with optimized hyperparameters for fine-tuning (fine-tuned on CIFAR-10 from pretrained weights on ImageNet-1k).}
+    \caption{\label{fig:fastvit_train_pretrained_cm}Historical FastViT-T8 fine-tuning confusion matrix. Evaluation split and axis orientation remain unresolved; see revision note.}
 \end{figure}
 
 \subsection{Accuracy comparison}
 % Ref: https://github.com/huggingface/pytorch-image-models/blob/main/results/results-imagenet.csv
-This subsection will detail top-1 accuracy on ImageNet-1k for each model. The accuracy values presented in Table \ref{tab:model_param_counts} are drawn from the Hugging Face PyTorch Image Models (timm) benchmarks \cite{pytorch-image-models}, which provide a standardized comparison of a wide range of architectures evaluated under consistent conditions on the ImageNet-1k dataset. These reported top-1 accuracy scores allow us to compare the baseline performance of the studied models before considering their latency and resource usage in mobile deployments.
+This subsection will detail top-1 accuracy on ImageNet-1k for each model. The accuracy values presented in Table \ref{tab:imagenet_accuracy} are drawn from the Hugging Face PyTorch Image Models (timm) benchmarks \cite{pytorch-image-models}, which report evaluation on ImageNet-1k. These weights have different training recipes; notably, the selected TinyViT variants use ImageNet-22k distillation and ImageNet-1k fine-tuning. This is not a controlled comparison with equal pretraining histories. These reported top-1 accuracy scores allow us to compare the baseline performance of the studied models before considering their latency and resource usage in mobile deployments.
 
-\begin{table}[]
+\begin{table}[tbp]
     \centering
     \doublespacing
     \captionsetup{justification=centering,margin=1cm}
@@ -375,16 +370,16 @@ This subsection will detail top-1 accuracy on ImageNet-1k for each model. The ac
         ResNet-34 & 76.41 \\
         \hline
     \end{tabular}
-    \caption{Top-1 accuracy of studied models when trained on ImageNet-1k dataset.}
-    \label{tab:model_param_counts}
+    \caption{Externally reported ImageNet-1k top-1 accuracy; not measured in this project. Training histories differ.}
+    \label{tab:imagenet_accuracy}
 \end{table}
 
 Looking at the results, we see that TinyViT models achieve the highest accuracies among the considered architectures, with TinyViT-21M reaching 83.27\% and TinyViT-11M at 81.54\%. FastViT-SA12 follows closely at 80.84\%, outperforming both MobileOne and ResNet variants. In contrast, the ResNet-18 and ResNet-34 models—representative of a more traditional CNN architecture—display lower top-1 accuracies at 71.49\% and 76.41\%, respectively. While these accuracies provide an initial ranking of models by predictive power on ImageNet-1k, the subsequent analyses will consider whether these accuracy advantages translate efficiently to on-device scenarios, where latency, memory consumption, and overall mobile performance may shift the balance of which model is most suitable.
 
 \subsection{Latency and load comparison}
-This subsection will compare the prediction median, load median, and compilation median times across the four models, providing insights into which architectures are most suitable for real-time mobile inference. Table \ref{tab:on_device_performance} illustrates these latency indicators for each model. A prediction time of around 20 ms tells that a model could support about 50 frames per second, if it were to be deployed for real time predictions.
+This subsection will compare the prediction median, load median, and compilation median times across the four models, providing insights into which architectures are most suitable for real-time mobile inference. Table \ref{tab:on_device_performance} illustrates these latency indicators for each model. These are historical model-only timings, not end-to-end app latency. Camera capture, resize/crop, scheduling, UI work, and energy use were not measured. Original Xcode/iOS versions, compute-unit selection, iteration counts, and raw performance reports are unavailable.
 
-\begin{table}[]
+\begin{table}[tbp]
     \centering
     \doublespacing
     \captionsetup{justification=centering,margin=1cm}
@@ -407,7 +402,7 @@ This subsection will compare the prediction median, load median, and compilation
 
 Additionally, a comparison of the model size and the total operations to perform an inference task is provided. Table \ref{tab:model_params_ops} illustrates the total number of operations allocated to perform a single task. They represent ``computational units'' or ``workloads'' that the model’s execution engine schedules on different compute unit processors.
 
-\begin{table}[]
+\begin{table}[tbp]
     \centering
     \doublespacing
     \captionsetup{justification=centering,margin=1cm}
@@ -424,7 +419,7 @@ Additionally, a comparison of the model size and the total operations to perform
         ResNet-34 & 21.8 & 94 \\
         \hline
     \end{tabular}
-    \caption{Model parameter counts and total operations measured on-device.}
+    \caption{Reported parameter counts and Xcode operation counts (not FLOPs).}
     \label{tab:model_params_ops}
 \end{table}
 
@@ -436,9 +431,9 @@ The results highlight the complex trade-offs between accuracy, latency, and mode
 
 On the other hand, more lightweight architectures such as FastViT-T8 and MobileOne-S1 managed to offer rapid prediction times with fewer operations, making them appealing candidates for latency-sensitive use cases like real-time video processing or embedded systems. While these models may not achieve the top-tier accuracy of heavier architectures, their speed and efficiency can be critical for maintaining a responsive user experience on mobile devices. Interestingly, parameters and operations alone were not always reliable predictors of latency—some models with fewer parameters still took relatively longer to load or compile, suggesting that memory access patterns, the choice of activation functions, or hardware-level optimizations can significantly influence actual runtime performance.
 
-Figure~\ref{fig:comparison_latency_inference} further illustrates the complexity of predicting on-device latency from model size alone. In this scatter plot, models with fewer parameters do not consistently yield lower prediction times, and conversely, some architectures with higher parameter counts achieve relatively low latency. This lack of correlation suggests that other factors—such as operator types, memory access patterns, and hardware-level optimizations—play a more decisive role in determining actual inference speed than mere parameter count.
+Figure~\ref{fig:comparison_latency_inference} further illustrates the complexity of predicting on-device latency from model size alone. In this scatter plot, models with fewer parameters do not consistently yield lower prediction times, and conversely, some architectures with higher parameter counts achieve relatively low latency. The measurements suggest that parameter count alone is insufficient to predict latency. They do not establish which operators or hardware effects caused the differences.
 
-\begin{figure}[]
+\begin{figure}[tbp]
     \centering
     \captionsetup{justification=centering,margin=1cm}
     \includegraphics[width=0.8\linewidth]{comparison_latency_inference.png}
@@ -446,9 +441,9 @@ Figure~\ref{fig:comparison_latency_inference} further illustrates the complexity
 \end{figure}
 
 \subsubsection{Training FastViT}
-The experiments with FastViT also illustrate the importance of tailoring training strategies to the model’s initialization. Fine-tuning from pretrained weights required more conservative hyperparameter choices, notably a lower learning rate, to avoid instability in validation performance. Once these adjustments were made, the fine-tuned model not only outperformed the from-scratch training version in accuracy but maintained stable training dynamics. This demonstrates that effective fine-tuning can yield both efficiency and accuracy advantages, provided the training process is calibrated to the pretrained model’s characteristics.
+The experiments with FastViT also illustrate the importance of tailoring training strategies to the model’s initialization. Fine-tuning from pretrained weights required more conservative hyperparameter choices, notably a lower learning rate, to avoid instability in validation performance. Once these adjustments were made, the fine-tuned model not only outperformed the from-scratch training version in accuracy but maintained stable training dynamics. These historical curves motivate checking initialization-specific settings; they do not establish a fine-tuning latency advantage, which was not measured in this track.
 
-From the confusion matrix, it’s evident that FastViT has difficulties in distinguishing certain classes. For example, classes like ``cat'' and ``dog'', ``ship'' and ``plane'', or ``truck'' and ``car'', often get confused, likely due to similar shapes or textures. This suggest that classes with visually related features or overlapping backgrounds tend to cause more mistakes.
+From the confusion matrix, it’s evident that FastViT has difficulties in distinguishing certain classes. For example, classes like ``cat'' and ``dog'', ``ship'' and ``plane'', or ``truck'' and ``car'', often get confused, likely due to similar shapes or textures. This suggests that classes with visually related features or overlapping backgrounds tend to cause more mistakes.
 
 \section{Conclusion}
 This section summarizes the primary findings of this study, emphasizing the importance of balancing accuracy and efficiency for mobile deployment, and states which models are best suited under certain constraints. Additionally, recommendations for future work and research is provided based on the review of literature and experimentations made in the project.
@@ -457,9 +452,9 @@ This section summarizes the primary findings of this study, emphasizing the impo
 
 This study provides a comparative analysis of four major neural network architectures—ResNet, TinyViT, MobileOne, and FastViT—under the constraints of on-device mobile deployments. The results underscore the importance of balancing accuracy with practical performance metrics, such as prediction latency and load/compile times. Although certain models, like TinyViT, excelled in top-1 accuracy on ImageNet-1k, their slower prediction speed and higher computational load may limit their viability in latency-critical applications. Conversely, models like FastViT-T8 and MobileOne-S1 offered near-real-time inference speeds on an iPhone 13 Pro at the cost of slightly lower accuracy.
 
-Despite ResNet’s relatively low inference times and minimal operation counts, its top-1 accuracy remains the lowest among the evaluated models. By contrast, MobileOne and FastViT variants—though similar in parameter count to certain ResNet configurations—achieve higher accuracy at the expense of slightly increased inference latencies. This discrepancy can be attributed to the sophisticated reparameterization strategies employed by MobileOne and FastViT, which enable them to pack more representational capacity into a similar-sized parameter space. In other words, while the number of parameters remains comparable, their internal structure is more complex and expressive, ultimately yielding better accuracy even if it requires marginally more time to process on-device.
+In the historical measurements, FastViT-T8 had the lowest prediction median among the eight variants, while the ResNet variants had lower load and compile times than the other families. The externally sourced ImageNet scores favor different models, including TinyViT-21M. Different training recipes and model structures confound this comparison; these measurements do not isolate the effect of architecture or reparameterization.
 
-Among the architectures examined, FastViT stands out as a particularly promising solution for bringing hybrid vision transformers to mobile devices. Traditional ViTs, though effective at modeling global dependencies and achieving high accuracy, are often computationally heavy and memory-intensive, making them challenging to deploy on resource-constrained hardware. FastViT’s hybrid approach, which leverages CNN-like efficiency mechanisms alongside the representational power of transformers, strikes an elegant balance. By employing reparameterization strategies and replacing certain attention layers with large-kernel convolutions, FastViT significantly reduces latency without sacrificing accuracy. This demonstrates that the performance benefits of transformers can indeed be realized within the strict performance budgets of mobile platforms, paving the way for more advanced on-device applications that were previously deemed impractical with conventional ViTs.
+FastViT is a useful candidate family for further device-specific investigation. However, T8 uses convolutional RepMixer blocks without self-attention, while SA12 includes attention. The family name alone cannot support a conclusion that attention caused a particular latency or accuracy outcome. A future plant-recognition study would need its own dataset, controlled evaluation, converted-model prediction checks, and end-to-end device profiling.
 
 From the training perspective, the experiments with FastViT highlight that hyperparameter settings optimized for from-scratch training may not translate directly to fine-tuning scenarios. Adjusting parameters such as learning rates can significantly influence model stability and final performance. By carefully tuning these factors, it is possible to leverage pretrained weights to achieve better generalization and stronger results than from-scratch training on smaller datasets like CIFAR-10.
 

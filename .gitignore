@@ -1,4 +1,7 @@
-data
+/data/
 __pycache__/
 .DS_Store
+/build/
 /report/build/
+/coreml_models/**/*.mlpackage/Data/
+.venv/
